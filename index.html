@@ -13,6 +13,8 @@
         header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #334155; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         h1 { font-size: 18px; color: #fff; }
         .subtitle { font-size: 12px; color: #94a3b8; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
+        .sync-badge { font-size: 11px; background: #064e3b; color: #34d399; padding: 6px 12px; border-radius: 20px; border: 1px solid #059669; font-weight: 500; }
         .btn-print { background: #1e293b; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
         .btn-print:hover { background: #334155; }
 
@@ -62,6 +64,39 @@
         .bar-bg { background: #0f172a; height: 14px; border-radius: 7px; overflow: hidden; }
         .bar-fill { height: 100%; border-radius: 7px; transition: width 0.3s ease; }
     </style>
+
+    <!-- Firebase SDK (Modular v10) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Configuração Pública Segura de Nuvem Compartilhada
+        const firebaseConfig = {
+            databaseURL: "https://simulador-imovel-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db, 'simulacao_cuiaba_compartilhada');
+
+        let isIncomingUpdate = false;
+
+        // Funções Globais expostas para a interface
+        window.salvarNaNuvem = function(dados) {
+            if (isIncomingUpdate) return;
+            set(dbRef, { ...dados, updatedAt: Date.now() }).catch(() => {});
+        };
+
+        // Escuta atualizações de qualquer outro usuário em tempo real
+        onValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && typeof carregarDadosRemotos === 'function') {
+                isIncomingUpdate = true;
+                carregarDadosRemotos(data);
+                isIncomingUpdate = false;
+            }
+        });
+    </script>
 </head>
 <body>
 
@@ -69,9 +104,12 @@
         <header>
             <div>
                 <h1>Balanço de Caixa para Compra do Imóvel</h1>
-                <p class="subtitle">Simulador de Liquidez e Patrimônio</p>
+                <p class="subtitle">Simulador Colaborativo em Tempo Real</p>
             </div>
-            <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+            <div class="header-right">
+                <span class="sync-badge">🟢 Sincronizado</span>
+                <button class="btn-print" onclick="window.print()">🖨️ Imprimir PDF</button>
+            </div>
         </header>
 
         <!-- KPI Cards -->
@@ -107,11 +145,11 @@
                     <div class="form-row">
                         <div class="input-group">
                             <label>Valor do Imóvel (R$)</label>
-                            <input type="number" id="valor_imovel" value="480000" oninput="calcular()">
+                            <input type="number" id="valor_imovel" value="480000" oninput="calcular(true)">
                         </div>
                         <div class="input-group">
                             <label>Entrada (%)</label>
-                            <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular()">
+                            <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular(true)">
                         </div>
                         <div class="input-group">
                             <label>Valor da Entrada</label>
@@ -173,8 +211,8 @@
                 </div>
 
                 <div class="card" style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                    <strong style="color: #60a5fa; display: block; margin-bottom: 6px;">💡 Dica de Planejamento:</strong>
-                    A Sobra Líquida Final representa exatamente o dinheiro que permanece livre no seu bolso depois de pagar a entrada, ITBI, cartório, reformas, móveis e vender o carro quitado.
+                    <strong style="color: #60a5fa; display: block; margin-bottom: 6px;">💡 Modo Colaborativo Ativo:</strong>
+                    Qualquer alteração feita por você ou por quem estiver com o link aberto atualiza os valores na tela de todos instantaneamente em tempo real.
                 </div>
             </div>
         </div>
@@ -196,4 +234,117 @@
         ];
 
         function formatBRL(val) {
-            return new Intl.NumberFormat('pt-BR', { style:
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+        }
+
+        function renderizar() {
+            const contRec = document.getElementById('lista-recursos');
+            contRec.innerHTML = recursos.map(r => `
+                <div class="item-row">
+                    <input type="text" value="${r.nome}" onchange="altNomeRec('${r.id}', this.value)">
+                    <span style="color:#64748b; font-size:11px;">R$</span>
+                    <input type="number" value="${r.valor}" oninput="altValRec('${r.id}', this.value)">
+                    <button class="btn-del" onclick="delRec('${r.id}')">✕</button>
+                </div>
+            `).join('');
+
+            const contGas = document.getElementById('lista-gastos');
+            contGas.innerHTML = gastos.map(g => `
+                <div class="item-row">
+                    <input type="text" value="${g.nome}" onchange="altNomeGas('${g.id}', this.value)">
+                    <span style="color:#64748b; font-size:11px;">R$</span>
+                    <input type="number" value="${g.valor}" oninput="altValGas('${g.id}', this.value)">
+                    <button class="btn-del" onclick="delGas('${g.id}')">✕</button>
+                </div>
+            `).join('');
+
+            calcular(true);
+        }
+
+        function altNomeRec(id, val) { const item = recursos.find(r => r.id === id); if(item) item.nome = val; calcular(true); }
+        function altValRec(id, val) { const item = recursos.find(r => r.id === id); if(item) item.valor = parseFloat(val) || 0; calcular(true); }
+        function delRec(id) { recursos = recursos.filter(r => r.id !== id); renderizar(); }
+        function adicionarRecurso() { recursos.push({ id: Date.now().toString(), nome: 'Novo Item', valor: 0 }); renderizar(); }
+
+        function altNomeGas(id, val) { const item = gastos.find(g => g.id === id); if(item) item.nome = val; calcular(true); }
+        function altValGas(id, val) { const item = gastos.find(g => g.id === id); if(item) item.valor = parseFloat(val) || 0; calcular(true); }
+        function delGas(id) { gastos = gastos.filter(g => g.id !== id); renderizar(); }
+        function adicionarGasto() { gastos.push({ id: Date.now().toString(), nome: 'Nova Despesa', valor: 0 }); renderizar(); }
+
+        function calcular(enviarNuvem = false) {
+            const vImovel = parseFloat(document.getElementById('valor_imovel').value) || 0;
+            const pEntrada = parseFloat(document.getElementById('pct_entrada').value) || 0;
+
+            const vEntrada = vImovel * (pEntrada / 100);
+            const vFinanc = vImovel - vEntrada;
+
+            document.getElementById('valor_entrada_calc').value = formatBRL(vEntrada);
+            document.getElementById('valor_financiamento_calc').innerText = formatBRL(vFinanc);
+
+            const totRec = recursos.reduce((a, b) => a + (b.valor || 0), 0);
+            const totOutrosGas = gastos.reduce((a, b) => a + (b.valor || 0), 0);
+            const totGas = vEntrada + totOutrosGas;
+
+            const sobra = totRec - totGas;
+
+            const carro = recursos.find(r => r.nome.toLowerCase().includes('carro'))?.valor || 0;
+            const divCarro = gastos.find(g => g.nome.toLowerCase().includes('carro'))?.valor || 0;
+            const sobraCarro = carro - divCarro;
+
+            document.getElementById('kpi-patrimonio').innerText = formatBRL(totRec);
+            document.getElementById('kpi-gastos').innerText = formatBRL(totGas);
+            document.getElementById('kpi-sobra').innerText = formatBRL(sobra);
+            document.getElementById('kpi-carro-liquido').innerText = formatBRL(sobraCarro);
+            document.getElementById('subtotal-recursos').innerText = formatBRL(totRec);
+            document.getElementById('subtotal-gastos').innerText = formatBRL(totGas);
+
+            const maxVal = Math.max(totRec, totGas, 1);
+            document.getElementById('bar-rec-val').innerText = formatBRL(totRec);
+            document.getElementById('bar-gas-val').innerText = formatBRL(totGas);
+            document.getElementById('bar-sob-val').innerText = formatBRL(sobra);
+
+            document.getElementById('bar-rec').style.width = Math.min(100, (totRec / maxVal) * 100) + '%';
+            document.getElementById('bar-gas').style.width = Math.min(100, (totGas / maxVal) * 100) + '%';
+            document.getElementById('bar-sob').style.width = Math.max(0, Math.min(100, (sobra / maxVal) * 100)) + '%';
+
+            if (enviarNuvem && typeof window.salvarNaNuvem === 'function') {
+                window.salvarNaNuvem({ vImovel, pEntrada, recursos, gastos });
+            }
+        }
+
+        // Função chamada quando outro usuário altera dados na nuvem
+        window.carregarDadosRemotos = function(data) {
+            if (data.vImovel !== undefined) document.getElementById('valor_imovel').value = data.vImovel;
+            if (data.pEntrada !== undefined) document.getElementById('pct_entrada').value = data.pEntrada;
+            if (data.recursos) recursos = data.recursos;
+            if (data.gastos) gastos = data.gastos;
+            
+            // Re-renderiza sem reenviar para a nuvem em loop
+            const contRec = document.getElementById('lista-recursos');
+            contRec.innerHTML = recursos.map(r => `
+                <div class="item-row">
+                    <input type="text" value="${r.nome}" onchange="altNomeRec('${r.id}', this.value)">
+                    <span style="color:#64748b; font-size:11px;">R$</span>
+                    <input type="number" value="${r.valor}" oninput="altValRec('${r.id}', this.value)">
+                    <button class="btn-del" onclick="delRec('${r.id}')">✕</button>
+                </div>
+            `).join('');
+
+            const contGas = document.getElementById('lista-gastos');
+            contGas.innerHTML = gastos.map(g => `
+                <div class="item-row">
+                    <input type="text" value="${g.nome}" onchange="altNomeGas('${g.id}', this.value)">
+                    <span style="color:#64748b; font-size:11px;">R$</span>
+                    <input type="number" value="${g.valor}" oninput="altValGas('${g.id}', this.value)">
+                    <button class="btn-del" onclick="delGas('${g.id}')">✕</button>
+                </div>
+            `).join('');
+
+            calcular(false);
+        };
+
+        // Inicialização
+        renderizar();
+    </script>
+</body>
+</html>
