@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Balanço Financeiro - Compra de Imóvel</title>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 16px; font-size: 14px; }
@@ -13,10 +15,10 @@
         header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #334155; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         h1 { font-size: 18px; color: #fff; }
         .subtitle { font-size: 12px; color: #94a3b8; }
-        .header-right { display: flex; gap: 10px; align-items: center; }
+        .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .sync-badge { font-size: 11px; background: #064e3b; color: #34d399; padding: 6px 12px; border-radius: 20px; border: 1px solid #059669; font-weight: 500; }
-        .btn-print { background: #1e293b; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
-        .btn-print:hover { background: #334155; }
+        .btn-action { background: #1e293b; color: #f8fafc; border: 1px solid #475569; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-action:hover { background: #334155; }
 
         /* KPIs */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -64,39 +66,6 @@
         .bar-bg { background: #0f172a; height: 14px; border-radius: 7px; overflow: hidden; }
         .bar-fill { height: 100%; border-radius: 7px; transition: width 0.3s ease; }
     </style>
-
-    <!-- Firebase SDK (Modular v10) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // Configuração Pública Segura de Nuvem Compartilhada
-        const firebaseConfig = {
-            databaseURL: "https://simulador-imovel-default-rtdb.firebaseio.com"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const dbRef = ref(db, 'simulacao_cuiaba_compartilhada');
-
-        let isIncomingUpdate = false;
-
-        // Funções Globais expostas para a interface
-        window.salvarNaNuvem = function(dados) {
-            if (isIncomingUpdate) return;
-            set(dbRef, { ...dados, updatedAt: Date.now() }).catch(() => {});
-        };
-
-        // Escuta atualizações de qualquer outro usuário em tempo real
-        onValue(dbRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data && typeof carregarDadosRemotos === 'function') {
-                isIncomingUpdate = true;
-                carregarDadosRemotos(data);
-                isIncomingUpdate = false;
-            }
-        });
-    </script>
 </head>
 <body>
 
@@ -107,8 +76,8 @@
                 <p class="subtitle">Simulador Colaborativo em Tempo Real</p>
             </div>
             <div class="header-right">
-                <span class="sync-badge">🟢 Sincronizado</span>
-                <button class="btn-print" onclick="window.print()">🖨️ Imprimir PDF</button>
+                <span id="sync-status" class="sync-badge">🟢 Conectado</span>
+                <button class="btn-action" onclick="window.print()">🖨️ PDF</button>
             </div>
         </header>
 
@@ -145,11 +114,11 @@
                     <div class="form-row">
                         <div class="input-group">
                             <label>Valor do Imóvel (R$)</label>
-                            <input type="number" id="valor_imovel" value="480000" oninput="calcular(true)">
+                            <input type="number" id="valor_imovel" value="480000" oninput="alterarDado()">
                         </div>
                         <div class="input-group">
                             <label>Entrada (%)</label>
-                            <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular(true)">
+                            <input type="number" id="pct_entrada" value="20" step="0.5" oninput="alterarDado()">
                         </div>
                         <div class="input-group">
                             <label>Valor da Entrada</label>
@@ -209,16 +178,19 @@
                         <div class="bar-bg"><div id="bar-sob" class="bar-fill" style="background: #60a5fa; width: 0%;"></div></div>
                     </div>
                 </div>
-
-                <div class="card" style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                    <strong style="color: #60a5fa; display: block; margin-bottom: 6px;">💡 Modo Colaborativo Ativo:</strong>
-                    Qualquer alteração feita por você ou por quem estiver com o link aberto atualiza os valores na tela de todos instantaneamente em tempo real.
-                </div>
             </div>
         </div>
     </div>
 
+    <!-- Script de Integração com o Supabase (Tempo Real) -->
     <script>
+        // ⚠️ SUBSTITUA PELAS SUAS CHAVES DO SUPABASE:
+        const SUPABASE_URL = 'https://qlsjncffvmvwqcolvgcf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_1Mv5LAPP2FxFcK4i0VilYQ_iOsZV7J4';
+
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         let recursos = [
             { id: '1', nome: 'Carro', valor: 154000 },
             { id: '2', nome: 'FGTS - Valéria', valor: 20000 },
@@ -233,15 +205,17 @@
             { id: 'g4', nome: 'Reforma', valor: 0 }
         ];
 
+        let bloquearEnvio = false;
+
         function formatBRL(val) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
         }
 
-        function renderizar() {
+        function renderizarListas() {
             const contRec = document.getElementById('lista-recursos');
             contRec.innerHTML = recursos.map(r => `
                 <div class="item-row">
-                    <input type="text" value="${r.nome}" onchange="altNomeRec('${r.id}', this.value)">
+                    <input type="text" value="${r.nome}" oninput="altNomeRec('${r.id}', this.value)">
                     <span style="color:#64748b; font-size:11px;">R$</span>
                     <input type="number" value="${r.valor}" oninput="altValRec('${r.id}', this.value)">
                     <button class="btn-del" onclick="delRec('${r.id}')">✕</button>
@@ -251,27 +225,27 @@
             const contGas = document.getElementById('lista-gastos');
             contGas.innerHTML = gastos.map(g => `
                 <div class="item-row">
-                    <input type="text" value="${g.nome}" onchange="altNomeGas('${g.id}', this.value)">
+                    <input type="text" value="${g.nome}" oninput="altNomeGas('${g.id}', this.value)">
                     <span style="color:#64748b; font-size:11px;">R$</span>
                     <input type="number" value="${g.valor}" oninput="altValGas('${g.id}', this.value)">
                     <button class="btn-del" onclick="delGas('${g.id}')">✕</button>
                 </div>
             `).join('');
 
-            calcular(true);
+            calcular(false);
         }
 
-        function altNomeRec(id, val) { const item = recursos.find(r => r.id === id); if(item) item.nome = val; calcular(true); }
-        function altValRec(id, val) { const item = recursos.find(r => r.id === id); if(item) item.valor = parseFloat(val) || 0; calcular(true); }
-        function delRec(id) { recursos = recursos.filter(r => r.id !== id); renderizar(); }
-        function adicionarRecurso() { recursos.push({ id: Date.now().toString(), nome: 'Novo Item', valor: 0 }); renderizar(); }
+        function altNomeRec(id, val) { const item = recursos.find(r => r.id === id); if(item) item.nome = val; alterarDado(); }
+        function altValRec(id, val) { const item = recursos.find(r => r.id === id); if(item) item.valor = parseFloat(val) || 0; alterarDado(); }
+        function delRec(id) { recursos = recursos.filter(r => r.id !== id); renderizarListas(); alterarDado(); }
+        function adicionarRecurso() { recursos.push({ id: Date.now().toString(), nome: 'Novo Item', valor: 0 }); renderizarListas(); alterarDado(); }
 
-        function altNomeGas(id, val) { const item = gastos.find(g => g.id === id); if(item) item.nome = val; calcular(true); }
-        function altValGas(id, val) { const item = gastos.find(g => g.id === id); if(item) item.valor = parseFloat(val) || 0; calcular(true); }
-        function delGas(id) { gastos = gastos.filter(g => g.id !== id); renderizar(); }
-        function adicionarGasto() { gastos.push({ id: Date.now().toString(), nome: 'Nova Despesa', valor: 0 }); renderizar(); }
+        function altNomeGas(id, val) { const item = gastos.find(g => g.id === id); if(item) item.nome = val; alterarDado(); }
+        function altValGas(id, val) { const item = gastos.find(g => g.id === id); if(item) item.valor = parseFloat(val) || 0; alterarDado(); }
+        function delGas(id) { gastos = gastos.filter(g => g.id !== id); renderizarListas(); alterarDado(); }
+        function adicionarGasto() { gastos.push({ id: Date.now().toString(), nome: 'Nova Despesa', valor: 0 }); renderizarListas(); alterarDado(); }
 
-        function calcular(enviarNuvem = false) {
+        function calcular(sincronizar = true) {
             const vImovel = parseFloat(document.getElementById('valor_imovel').value) || 0;
             const pEntrada = parseFloat(document.getElementById('pct_entrada').value) || 0;
 
@@ -307,44 +281,68 @@
             document.getElementById('bar-gas').style.width = Math.min(100, (totGas / maxVal) * 100) + '%';
             document.getElementById('bar-sob').style.width = Math.max(0, Math.min(100, (sobra / maxVal) * 100)) + '%';
 
-            if (enviarNuvem && typeof window.salvarNaNuvem === 'function') {
-                window.salvarNaNuvem({ vImovel, pEntrada, recursos, gastos });
+            if (sincronizar) {
+                salvarNoSupabase();
             }
         }
 
-        // Função chamada quando outro usuário altera dados na nuvem
-        window.carregarDadosRemotos = function(data) {
-            if (data.vImovel !== undefined) document.getElementById('valor_imovel').value = data.vImovel;
-            if (data.pEntrada !== undefined) document.getElementById('pct_entrada').value = data.pEntrada;
-            if (data.recursos) recursos = data.recursos;
-            if (data.gastos) gastos = data.gastos;
+        function alterarDado() {
+            calcular(true);
+        }
+
+        // --- FUNÇÕES DE NUVEM (SUPABASE) ---
+        async function salvarNoSupabase() {
+            if (bloquearEnvio) return;
+            const vImovel = document.getElementById('valor_imovel').value;
+            const pEntrada = document.getElementById('pct_entrada').value;
             
-            // Re-renderiza sem reenviar para a nuvem em loop
-            const contRec = document.getElementById('lista-recursos');
-            contRec.innerHTML = recursos.map(r => `
-                <div class="item-row">
-                    <input type="text" value="${r.nome}" onchange="altNomeRec('${r.id}', this.value)">
-                    <span style="color:#64748b; font-size:11px;">R$</span>
-                    <input type="number" value="${r.valor}" oninput="altValRec('${r.id}', this.value)">
-                    <button class="btn-del" onclick="delRec('${r.id}')">✕</button>
-                </div>
-            `).join('');
+            const payload = { vImovel, pEntrada, recursos, gastos };
 
-            const contGas = document.getElementById('lista-gastos');
-            contGas.innerHTML = gastos.map(g => `
-                <div class="item-row">
-                    <input type="text" value="${g.nome}" onchange="altNomeGas('${g.id}', this.value)">
-                    <span style="color:#64748b; font-size:11px;">R$</span>
-                    <input type="number" value="${g.valor}" oninput="altValGas('${g.id}', this.value)">
-                    <button class="btn-del" onclick="delGas('${g.id}')">✕</button>
-                </div>
-            `).join('');
+            // Salva na linha ID 1 da tabela
+            await _supabase.from('simulacao').upsert({ id: 1, dados: payload });
+        }
 
-            calcular(false);
-        };
+        async function carregarDoSupabase() {
+            const { data, error } = await _supabase.from('simulacao').select('dados').eq('id', 1).single();
+            if (data && data.dados) {
+                bloquearEnvio = true;
+                const p = data.dados;
+                if(p.vImovel) document.getElementById('valor_imovel').value = p.vImovel;
+                if(p.pEntrada) document.getElementById('pct_entrada').value = p.pEntrada;
+                if(p.recursos) recursos = p.recursos;
+                if(p.gastos) gastos = p.gastos;
+                renderizarListas();
+                bloquearEnvio = false;
+            }
+        }
+
+        // Ouvir alterações em tempo real dos outros usuários
+        function ouvirTempoReal() {
+            _supabase
+                .channel('public:simulacao')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'simulacao' }, payload => {
+                    if (payload.new && payload.new.dados) {
+                        const p = payload.new.dados;
+                        bloquearEnvio = true;
+                        if(p.vImovel) document.getElementById('valor_imovel').value = p.vImovel;
+                        if(p.pEntrada) document.getElementById('pct_entrada').value = p.pEntrada;
+                        if(p.recursos) recursos = p.recursos;
+                        if(p.gastos) gastos = p.gastos;
+                        renderizarListas();
+                        bloquearEnvio = false;
+                    }
+                })
+                .subscribe();
+        }
 
         // Inicialização
-        renderizar();
+        async function init() {
+            await carregarDoSupabase();
+            renderizarListas();
+            ouvirTempoReal();
+        }
+
+        init();
     </script>
 </body>
 </html>
