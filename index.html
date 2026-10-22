@@ -3,227 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Balanço Financeiro & Liquidez - Compra de Imóvel</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Balanço Financeiro - Compra de Imóvel</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; padding: 16px; font-size: 14px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #334155; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        h1 { font-size: 18px; color: #fff; }
+        .subtitle { font-size: 12px; color: #94a3b8; }
+        .btn-print { background: #1e293b; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+        .btn-print:hover { background: #334155; }
+
+        /* KPIs */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+        .kpi-card.sobra { border: 2px solid #3b82f6; background: linear-gradient(135deg, #1e293b 0%, #172554 100%); }
+        .kpi-title { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .kpi-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+        .green { color: #34d399; }
+        .red { color: #f87171; }
+        .blue { color: #60a5fa; }
+        .amber { color: #fbbf24; }
+        .kpi-desc { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+        /* Main Grid */
+        .main-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media(min-width: 900px) { .main-grid { grid-template-columns: 3fr 2fr; } }
+
+        /* Cards */
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .card-title { font-size: 14px; font-weight: 600; color: #fff; }
+
+        /* Inputs & Form */
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+        input[type="number"], input[type="text"] { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; outline: none; width: 100%; }
+        input[type="number"]:focus, input[type="text"]:focus { border-color: #3b82f6; }
+        input[readonly] { background: #020617; color: #94a3b8; }
+
+        /* Dynamic Item Rows */
+        .item-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; background: #0f172a; padding: 6px 10px; border-radius: 8px; border: 1px solid #1e293b; }
+        .item-row input[type="text"] { border: none; background: transparent; padding: 4px; }
+        .item-row input[type="number"] { width: 110px; text-align: right; }
+        .btn-del { background: transparent; color: #ef4444; border: none; cursor: pointer; font-size: 16px; padding: 0 4px; font-weight: bold; }
+        .btn-add { background: #065f46; color: #34d399; border: 1px solid #047857; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; }
+        .btn-add.red-btn { background: #881337; color: #fda4af; border-color: #9f1239; }
+
+        /* Subtotals */
+        .subtotal { display: flex; justify-content: space-between; font-weight: 600; padding-top: 10px; border-top: 1px solid #334155; margin-top: 10px; font-size: 13px; }
+
+        /* Bars Visualizer */
+        .bar-container { margin-bottom: 12px; }
+        .bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+        .bar-bg { background: #0f172a; height: 14px; border-radius: 7px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 7px; transition: width 0.3s ease; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-12">
+<body>
 
-    <!-- Header / Navbar -->
-    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
-                    <i data-lucide="building-2" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-white tracking-tight">Balanço de Caixa para Compra do Imóvel</h1>
-                    <p class="text-xs text-slate-400">Simulador de Liquidez e Patrimônio</p>
-                </div>
+    <div class="container">
+        <header>
+            <div>
+                <h1>Balanço de Caixa para Compra do Imóvel</h1>
+                <p class="subtitle">Simulador de Liquidez e Patrimônio</p>
             </div>
-            
-            <div class="flex items-center gap-3">
-                <button onclick="exportarDados()" class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition">
-                    <i data-lucide="share-2" class="w-4 h-4"></i> Exportar Dados
-                </button>
-                <button onclick="window.print()" class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition">
-                    <i data-lucide="printer" class="w-4 h-4"></i> Imprimir / PDF
-                </button>
+            <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+        </header>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Patrimônio / Recursos</div>
+                <div class="kpi-value green" id="kpi-patrimonio">R$ 0,00</div>
+                <div class="kpi-desc">Soma de todas as reservas e ativos</div>
             </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-
-        <!-- KPI Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Patrimônio Total -->
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Patrimônio / Recursos</p>
-                        <h3 id="kpi-patrimonio" class="text-2xl font-bold text-emerald-400 mt-1">R$ 0,00</h3>
-                    </div>
-                    <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
-                        <i data-lucide="wallet" class="w-5 h-5"></i>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
-                    <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-emerald-400"></i>
-                    Soma de todas as reservas e ativos
-                </p>
+            <div class="kpi-card">
+                <div class="kpi-title">Total de Gastos</div>
+                <div class="kpi-value red" id="kpi-gastos">R$ 0,00</div>
+                <div class="kpi-desc">Entrada + Despesas + Quitações</div>
             </div>
-
-            <!-- Total de Gastos -->
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total de Gastos</p>
-                        <h3 id="kpi-gastos" class="text-2xl font-bold text-rose-400 mt-1">R$ 0,00</h3>
-                    </div>
-                    <div class="p-2 bg-rose-500/10 text-rose-400 rounded-lg">
-                        <i data-lucide="receipt" class="w-5 h-5"></i>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
-                    <i data-lucide="arrow-down-right" class="w-3.5 h-3.5 text-rose-400"></i>
-                    Entrada + Despesas + Quitações
-                </p>
+            <div class="kpi-card sobra">
+                <div class="kpi-title" style="color: #93c5fd;">SOBRA LÍQUIDA FINAL</div>
+                <div class="kpi-value blue" id="kpi-sobra">R$ 0,00</div>
+                <div class="kpi-desc" id="kpi-sobra-desc" style="color: #bfdbfe;">Reserva garantida</div>
             </div>
-
-            <!-- Sobra Líquida Final -->
-            <div class="bg-slate-800/80 border-2 border-blue-500/50 rounded-2xl p-5 relative overflow-hidden backdrop-blur bg-gradient-to-br from-slate-800/90 to-blue-950/30">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-blue-300 uppercase tracking-wider">SOBRA LÍQUIDA FINAL</p>
-                        <h3 id="kpi-sobra" class="text-2xl font-extrabold text-blue-400 mt-1">R$ 0,00</h3>
-                    </div>
-                    <div class="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
-                        <i data-lucide="piggy-bank" class="w-5 h-5"></i>
-                    </div>
-                </div>
-                <p id="kpi-sobra-desc" class="text-xs text-blue-200 mt-3 font-medium">Reserva de emergência garantida</p>
-            </div>
-
-            <!-- Líquido do Carro -->
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Sobra do Carro (Liquidez)</p>
-                        <h3 id="kpi-carro-liquido" class="text-2xl font-bold text-amber-400 mt-1">R$ 0,00</h3>
-                    </div>
-                    <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
-                        <i data-lucide="car" class="w-5 h-5"></i>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-400 mt-3">Valor da Venda - Dívida Quitada</p>
+            <div class="kpi-card">
+                <div class="kpi-title">Sobra do Carro</div>
+                <div class="kpi-value amber" id="kpi-carro-liquido">R$ 0,00</div>
+                <div class="kpi-desc">Valor da Venda - Dívida Quitada</div>
             </div>
         </div>
 
-        <!-- Main Workspace Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <!-- Left Panel: Form & Inputs (7 Cols) -->
-            <div class="lg:col-span-7 space-y-6">
-
-                <!-- Card: Dados Principais do Imóvel -->
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur space-y-4">
-                    <h2 class="text-base font-semibold text-white flex items-center gap-2">
-                        <i data-lucide="home" class="w-4 h-4 text-blue-400"></i> Imóvel & Financiamento
-                    </h2>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Valor do Imóvel</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2.5 text-xs text-slate-500">R$</span>
-                                <input type="number" id="valor_imovel" value="480000" oninput="calcular()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
+        <div class="main-grid">
+            <!-- Left Panel -->
+            <div>
+                <!-- Imóvel -->
+                <div class="card">
+                    <div class="card-title" style="margin-bottom: 12px;">🏠 Imóvel & Financiamento</div>
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label>Valor do Imóvel (R$)</label>
+                            <input type="number" id="valor_imovel" value="480000" oninput="calcular()">
                         </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Entrada (%)</label>
-                            <div class="relative">
-                                <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                                <span class="absolute right-3 top-2.5 text-xs text-slate-500">%</span>
-                            </div>
+                        <div class="input-group">
+                            <label>Entrada (%)</label>
+                            <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular()">
                         </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Valor da Entrada</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2.5 text-xs text-slate-500">R$</span>
-                                <input type="text" id="valor_entrada_calc" readonly class="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm font-semibold cursor-not-allowed">
-                            </div>
+                        <div class="input-group">
+                            <label>Valor da Entrada</label>
+                            <input type="text" id="valor_entrada_calc" readonly>
                         </div>
                     </div>
-
-                    <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-700/40 flex justify-between items-center text-xs">
-                        <span class="text-slate-400">Saldo a Financiar pelo Banco:</span>
-                        <span id="valor_financiamento_calc" class="font-bold text-amber-400 text-sm">R$ 0,00</span>
+                    <div style="background: #0f172a; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; font-size: 12px;">
+                        <span style="color: #94a3b8;">Saldo a Financiar pelo Banco:</span>
+                        <strong style="color: #fbbf24;" id="valor_financiamento_calc">R$ 0,00</strong>
                     </div>
                 </div>
 
-                <!-- Card: Patrimônio / Recursos Disponíveis -->
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-base font-semibold text-white flex items-center gap-2">
-                            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> Recursos & Patrimônio
-                        </h2>
-                        <button onclick="adicionarRecurso()" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Item
-                        </button>
+                <!-- Recursos -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">💵 Recursos & Patrimônio</div>
+                        <button class="btn-add" onclick="adicionarRecurso()">+ Adicionar Item</button>
                     </div>
-
-                    <div id="lista-recursos" class="space-y-3"></div>
-
-                    <div class="pt-3 border-t border-slate-700/60 flex justify-between items-center font-semibold text-sm">
-                        <span class="text-slate-300">Total de Recursos:</span>
-                        <span id="subtotal-recursos" class="text-emerald-400">R$ 0,00</span>
+                    <div id="lista-recursos"></div>
+                    <div class="subtotal">
+                        <span>Total de Recursos:</span>
+                        <span class="green" id="subtotal-recursos">R$ 0,00</span>
                     </div>
                 </div>
 
-                <!-- Card: Gastos, Custas & Quitações -->
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-base font-semibold text-white flex items-center gap-2">
-                            <i data-lucide="minus-circle" class="w-4 h-4 text-rose-400"></i> Gastos, Custas & Quitações
-                        </h2>
-                        <button onclick="adicionarGasto()" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Item
-                        </button>
+                <!-- Gastos -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">💸 Gastos, Custas & Quitações</div>
+                        <button class="btn-add red-btn" onclick="adicionarGasto()">+ Adicionar Item</button>
                     </div>
-
-                    <div id="lista-gastos" class="space-y-3"></div>
-
-                    <div class="pt-3 border-t border-slate-700/60 flex justify-between items-center font-semibold text-sm">
-                        <span class="text-slate-300">Total de Gastos:</span>
-                        <span id="subtotal-gastos" class="text-rose-400">R$ 0,00</span>
+                    <div id="lista-gastos"></div>
+                    <div class="subtotal">
+                        <span>Total de Gastos:</span>
+                        <span class="red" id="subtotal-gastos">R$ 0,00</span>
                     </div>
                 </div>
-
             </div>
 
-            <!-- Right Panel: Charts & Breakdown (5 Cols) -->
-            <div class="lg:col-span-5 space-y-6">
-
-                <!-- Card: Visualização do Gráfico de Liquidez -->
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur space-y-4">
-                    <h2 class="text-base font-semibold text-white flex items-center gap-2">
-                        <i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-400"></i> Balanço de Caixa
-                    </h2>
+            <!-- Right Panel -->
+            <div>
+                <div class="card">
+                    <div class="card-title" style="margin-bottom: 16px;">📊 Comparativo de Caixa</div>
                     
-                    <div class="h-56 relative">
-                        <canvas id="chartBalanço"></canvas>
+                    <div class="bar-container">
+                        <div class="bar-label"><span>Recursos Totais</span><strong id="bar-rec-val">R$ 0,00</strong></div>
+                        <div class="bar-bg"><div id="bar-rec" class="bar-fill" style="background: #34d399; width: 0%;"></div></div>
+                    </div>
+
+                    <div class="bar-container">
+                        <div class="bar-label"><span>Gastos Totais</span><strong id="bar-gas-val">R$ 0,00</strong></div>
+                        <div class="bar-bg"><div id="bar-gas" class="bar-fill" style="background: #f87171; width: 0%;"></div></div>
+                    </div>
+
+                    <div class="bar-container">
+                        <div class="bar-label"><span>Sobra Líquida</span><strong id="bar-sob-val">R$ 0,00</strong></div>
+                        <div class="bar-bg"><div id="bar-sob" class="bar-fill" style="background: #60a5fa; width: 0%;"></div></div>
                     </div>
                 </div>
 
-                <!-- Card: Distribuição dos Gastos -->
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur space-y-4">
-                    <h2 class="text-base font-semibold text-white flex items-center gap-2">
-                        <i data-lucide="pie-chart" class="w-4 h-4 text-purple-400"></i> Distribuição dos Gastos
-                    </h2>
-
-                    <div class="h-52 relative">
-                        <canvas id="chartGastos"></canvas>
-                    </div>
+                <div class="card" style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                    <strong style="color: #60a5fa; display: block; margin-bottom: 6px;">💡 Dica de Planejamento:</strong>
+                    A Sobra Líquida Final representa exatamente o dinheiro que permanece livre no seu bolso depois de pagar a entrada, ITBI, cartório, reformas, móveis e vender o carro quitado.
                 </div>
-
             </div>
-
         </div>
+    </div>
 
-    </main>
-
-    <!-- Script de Aplicação Local Robusto e Funcional -->
     <script>
         let recursos = [
             { id: '1', nome: 'Carro', valor: 154000 },
@@ -239,210 +195,5 @@
             { id: 'g4', nome: 'Reforma', valor: 0 }
         ];
 
-        let chartBalançoInst = null;
-        let chartGastosInst = null;
-
         function formatBRL(val) {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
-        }
-
-        function renderizarListas() {
-            const containerRec = document.getElementById('lista-recursos');
-            containerRec.innerHTML = recursos.map(r => `
-                <div class="flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
-                    <input type="text" value="${r.nome}" onchange="atualizarRecursoName('${r.id}', this.value)" class="flex-1 bg-transparent text-xs text-white border-none focus:ring-0 focus:outline-none">
-                    <div class="relative w-32">
-                        <span class="absolute left-2 top-1.5 text-xs text-slate-500">R$</span>
-                        <input type="number" value="${r.valor}" oninput="atualizarRecursoVal('${r.id}', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-2 py-1 text-xs text-emerald-400 font-semibold focus:outline-none">
-                    </div>
-                    <button onclick="removerRecurso('${r.id}')" class="text-slate-500 hover:text-rose-400 p-1">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            `).join('');
-
-            const containerGas = document.getElementById('lista-gastos');
-            containerGas.innerHTML = gastos.map(g => `
-                <div class="flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
-                    <input type="text" value="${g.nome}" onchange="atualizarGastoName('${g.id}', this.value)" class="flex-1 bg-transparent text-xs text-white border-none focus:ring-0 focus:outline-none">
-                    <div class="relative w-32">
-                        <span class="absolute left-2 top-1.5 text-xs text-slate-500">R$</span>
-                        <input type="number" value="${g.valor}" oninput="atualizarGastoVal('${g.id}', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-2 py-1 text-xs text-rose-400 font-semibold focus:outline-none">
-                    </div>
-                    <button onclick="removerGasto('${g.id}')" class="text-slate-500 hover:text-rose-400 p-1">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            `).join('');
-
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function atualizarRecursoName(id, val) {
-            const item = recursos.find(r => r.id === id);
-            if (item) item.nome = val;
-            calcular();
-        }
-
-        function atualizarRecursoVal(id, val) {
-            const item = recursos.find(r => r.id === id);
-            if (item) item.valor = parseFloat(val) || 0;
-            calcular();
-        }
-
-        function removerRecurso(id) {
-            recursos = recursos.filter(r => r.id !== id);
-            renderizarListas();
-            calcular();
-        }
-
-        function adicionarRecurso() {
-            recursos.push({ id: Date.now().toString(), nome: 'Novo Recurso', valor: 0 });
-            renderizarListas();
-            calcular();
-        }
-
-        function atualizarGastoName(id, val) {
-            const item = gastos.find(g => g.id === id);
-            if (item) item.nome = val;
-            calcular();
-        }
-
-        function atualizarGastoVal(id, val) {
-            const item = gastos.find(g => g.id === id);
-            if (item) item.valor = parseFloat(val) || 0;
-            calcular();
-        }
-
-        function removerGasto(id) {
-            gastos = gastos.filter(g => g.id !== id);
-            renderizarListas();
-            calcular();
-        }
-
-        function adicionarGasto() {
-            gastos.push({ id: Date.now().toString(), nome: 'Nova Despesa', valor: 0 });
-            renderizarListas();
-            calcular();
-        }
-
-        function calcular() {
-            const valorImovel = parseFloat(document.getElementById('valor_imovel').value) || 0;
-            const pctEntrada = parseFloat(document.getElementById('pct_entrada').value) || 0;
-
-            const valorEntrada = valorImovel * (pctEntrada / 100);
-            const valorFinanciamento = valorImovel - valorEntrada;
-
-            document.getElementById('valor_entrada_calc').value = formatBRL(valorEntrada);
-            document.getElementById('valor_financiamento_calc').innerText = formatBRL(valorFinanciamento);
-
-            const totalRecursos = recursos.reduce((acc, r) => acc + (r.valor || 0), 0);
-            const totalOutrosGastos = gastos.reduce((acc, g) => acc + (g.valor || 0), 0);
-            const totalGastosGeral = valorEntrada + totalOutrosGastos;
-
-            const sobraLiquida = totalRecursos - totalGastosGeral;
-
-            const carroItem = recursos.find(r => r.nome.toLowerCase().includes('carro'));
-            const dividaCarroItem = gastos.find(g => g.nome.toLowerCase().includes('carro'));
-            const carroVal = carroItem ? carroItem.valor : 0;
-            const dividaVal = dividaCarroItem ? dividaCarroItem.valor : 0;
-            const carroLiquido = carroVal - dividaVal;
-
-            document.getElementById('kpi-patrimonio').innerText = formatBRL(totalRecursos);
-            document.getElementById('kpi-gastos').innerText = formatBRL(totalGastosGeral);
-            document.getElementById('kpi-sobra').innerText = formatBRL(sobraLiquida);
-            document.getElementById('kpi-carro-liquido').innerText = formatBRL(carroLiquido);
-            document.getElementById('subtotal-recursos').innerText = formatBRL(totalRecursos);
-            document.getElementById('subtotal-gastos').innerText = formatBRL(totalGastosGeral);
-
-            const descSobra = document.getElementById('kpi-sobra-desc');
-            if (sobraLiquida >= 0) {
-                descSobra.innerText = "Reserva de emergência garantida";
-                descSobra.className = "text-xs text-blue-200 mt-3 font-medium";
-            } else {
-                descSobra.innerText = "Atenção: Déficit no balanço financeiro!";
-                descSobra.className = "text-xs text-rose-400 mt-3 font-medium";
-            }
-
-            atualizarGraficos(totalRecursos, totalGastosGeral, sobraLiquida, valorEntrada);
-
-            // Salva no navegador local
-            localStorage.setItem('dados_imovel_app', JSON.stringify({
-                valorImovel, pctEntrada, recursos, gastos
-            }));
-        }
-
-        function atualizarGraficos(recursosTotal, gastosTotal, sobra, valorEntrada) {
-            const ctx1 = document.getElementById('chartBalanço').getContext('2d');
-            if (chartBalançoInst) chartBalançoInst.destroy();
-
-            chartBalançoInst = new Chart(ctx1, {
-                type: 'bar',
-                data: {
-                    labels: ['Recursos', 'Gastos Totais', 'Sobra Líquida'],
-                    datasets: [{
-                        data: [recursosTotal, gastosTotal, Math.max(0, sobra)],
-                        backgroundColor: ['#10b981', '#f43f5e', '#3b82f6'],
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
-                    }
-                }
-            });
-
-            const ctx2 = document.getElementById('chartGastos').getContext('2d');
-            if (chartGastosInst) chartGastosInst.destroy();
-
-            const labelsGastos = ['Entrada', ...gastos.map(g => g.nome)];
-            const dataGastos = [valorEntrada, ...gastos.map(g => g.valor)];
-
-            chartGastosInst = new Chart(ctx2, {
-                type: 'doughnut',
-                data: {
-                    labels: labelsGastos,
-                    datasets: [{
-                        data: dataGastos,
-                        backgroundColor: ['#f43f5e', '#fb923c', '#a855f7', '#06b6d4', '#eab308', '#64748b'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
-                    }
-                }
-            });
-        }
-
-        function exportarDados() {
-            const dados = localStorage.getItem('dados_imovel_app');
-            prompt("Copie os dados abaixo para partilhar com outra pessoa ou guardar:", dados);
-        }
-
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', () => {
-            const salvo = localStorage.getItem('dados_imovel_app');
-            if (salvo) {
-                try {
-                    const parsed = JSON.parse(salvo);
-                    document.getElementById('valor_imovel').value = parsed.valorImovel || 480000;
-                    document.getElementById('pct_entrada').value = parsed.pctEntrada || 20;
-                    if (parsed.recursos) recursos = parsed.recursos;
-                    if (parsed.gastos) gastos = parsed.gastos;
-                } catch(e) {}
-            }
-            renderizarListas();
-            calcular();
-        });
-    </script>
-</body>
-</html>
+            return new Intl.NumberFormat('pt-BR', { style:
