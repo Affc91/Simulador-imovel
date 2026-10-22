@@ -26,15 +26,14 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-white tracking-tight">Balanço de Caixa para Compra do Imóvel</h1>
-                    <p class="text-xs text-slate-400">Simulador Colaborativo de Liquidez e Patrimônio</p>
+                    <p class="text-xs text-slate-400">Simulador de Liquidez e Patrimônio</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-3">
-                <div id="sync-status" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="sync-text">Conectado / Colaborativo</span>
-                </div>
+                <button onclick="exportarDados()" class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition">
+                    <i data-lucide="share-2" class="w-4 h-4"></i> Exportar Dados
+                </button>
                 <button onclick="window.print()" class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition">
                     <i data-lucide="printer" class="w-4 h-4"></i> Imprimir / PDF
                 </button>
@@ -126,14 +125,14 @@
                             <label class="block text-xs font-medium text-slate-400 mb-1">Valor do Imóvel</label>
                             <div class="relative">
                                 <span class="absolute left-3 top-2.5 text-xs text-slate-500">R$</span>
-                                <input type="number" id="valor_imovel" value="480000" oninput="calcular(true)" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <input type="number" id="valor_imovel" value="480000" oninput="calcular()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1">Entrada (%)</label>
                             <div class="relative">
-                                <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular(true)" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <input type="number" id="pct_entrada" value="20" step="0.5" oninput="calcular()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                 <span class="absolute right-3 top-2.5 text-xs text-slate-500">%</span>
                             </div>
                         </div>
@@ -224,12 +223,8 @@
 
     </main>
 
-    <!-- Script de Aplicação + Nuvem Pública em Tempo Real -->
+    <!-- Script de Aplicação Local Robusto e Funcional -->
     <script>
-        // Servidor de Sincronização em Nuvem (JSONBin / Sync Gratuito)
-        const NUVEM_API = "https://api.jsonbin.io/v3/b/660000000000000000000000"; // ID da sessão compartilhada
-
-        // Dados padrão iniciais
         let recursos = [
             { id: '1', nome: 'Carro', valor: 154000 },
             { id: '2', nome: 'FGTS - Valéria', valor: 20000 },
@@ -246,7 +241,6 @@
 
         let chartBalançoInst = null;
         let chartGastosInst = null;
-        let isReceiving = false;
 
         function formatBRL(val) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
@@ -272,4 +266,183 @@
                 <div class="flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
                     <input type="text" value="${g.nome}" onchange="atualizarGastoName('${g.id}', this.value)" class="flex-1 bg-transparent text-xs text-white border-none focus:ring-0 focus:outline-none">
                     <div class="relative w-32">
-                        <span class="absolute left-2 top-1.5 text-xs text
+                        <span class="absolute left-2 top-1.5 text-xs text-slate-500">R$</span>
+                        <input type="number" value="${g.valor}" oninput="atualizarGastoVal('${g.id}', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-2 py-1 text-xs text-rose-400 font-semibold focus:outline-none">
+                    </div>
+                    <button onclick="removerGasto('${g.id}')" class="text-slate-500 hover:text-rose-400 p-1">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function atualizarRecursoName(id, val) {
+            const item = recursos.find(r => r.id === id);
+            if (item) item.nome = val;
+            calcular();
+        }
+
+        function atualizarRecursoVal(id, val) {
+            const item = recursos.find(r => r.id === id);
+            if (item) item.valor = parseFloat(val) || 0;
+            calcular();
+        }
+
+        function removerRecurso(id) {
+            recursos = recursos.filter(r => r.id !== id);
+            renderizarListas();
+            calcular();
+        }
+
+        function adicionarRecurso() {
+            recursos.push({ id: Date.now().toString(), nome: 'Novo Recurso', valor: 0 });
+            renderizarListas();
+            calcular();
+        }
+
+        function atualizarGastoName(id, val) {
+            const item = gastos.find(g => g.id === id);
+            if (item) item.nome = val;
+            calcular();
+        }
+
+        function atualizarGastoVal(id, val) {
+            const item = gastos.find(g => g.id === id);
+            if (item) item.valor = parseFloat(val) || 0;
+            calcular();
+        }
+
+        function removerGasto(id) {
+            gastos = gastos.filter(g => g.id !== id);
+            renderizarListas();
+            calcular();
+        }
+
+        function adicionarGasto() {
+            gastos.push({ id: Date.now().toString(), nome: 'Nova Despesa', valor: 0 });
+            renderizarListas();
+            calcular();
+        }
+
+        function calcular() {
+            const valorImovel = parseFloat(document.getElementById('valor_imovel').value) || 0;
+            const pctEntrada = parseFloat(document.getElementById('pct_entrada').value) || 0;
+
+            const valorEntrada = valorImovel * (pctEntrada / 100);
+            const valorFinanciamento = valorImovel - valorEntrada;
+
+            document.getElementById('valor_entrada_calc').value = formatBRL(valorEntrada);
+            document.getElementById('valor_financiamento_calc').innerText = formatBRL(valorFinanciamento);
+
+            const totalRecursos = recursos.reduce((acc, r) => acc + (r.valor || 0), 0);
+            const totalOutrosGastos = gastos.reduce((acc, g) => acc + (g.valor || 0), 0);
+            const totalGastosGeral = valorEntrada + totalOutrosGastos;
+
+            const sobraLiquida = totalRecursos - totalGastosGeral;
+
+            const carroItem = recursos.find(r => r.nome.toLowerCase().includes('carro'));
+            const dividaCarroItem = gastos.find(g => g.nome.toLowerCase().includes('carro'));
+            const carroVal = carroItem ? carroItem.valor : 0;
+            const dividaVal = dividaCarroItem ? dividaCarroItem.valor : 0;
+            const carroLiquido = carroVal - dividaVal;
+
+            document.getElementById('kpi-patrimonio').innerText = formatBRL(totalRecursos);
+            document.getElementById('kpi-gastos').innerText = formatBRL(totalGastosGeral);
+            document.getElementById('kpi-sobra').innerText = formatBRL(sobraLiquida);
+            document.getElementById('kpi-carro-liquido').innerText = formatBRL(carroLiquido);
+            document.getElementById('subtotal-recursos').innerText = formatBRL(totalRecursos);
+            document.getElementById('subtotal-gastos').innerText = formatBRL(totalGastosGeral);
+
+            const descSobra = document.getElementById('kpi-sobra-desc');
+            if (sobraLiquida >= 0) {
+                descSobra.innerText = "Reserva de emergência garantida";
+                descSobra.className = "text-xs text-blue-200 mt-3 font-medium";
+            } else {
+                descSobra.innerText = "Atenção: Déficit no balanço financeiro!";
+                descSobra.className = "text-xs text-rose-400 mt-3 font-medium";
+            }
+
+            atualizarGraficos(totalRecursos, totalGastosGeral, sobraLiquida, valorEntrada);
+
+            // Salva no navegador local
+            localStorage.setItem('dados_imovel_app', JSON.stringify({
+                valorImovel, pctEntrada, recursos, gastos
+            }));
+        }
+
+        function atualizarGraficos(recursosTotal, gastosTotal, sobra, valorEntrada) {
+            const ctx1 = document.getElementById('chartBalanço').getContext('2d');
+            if (chartBalançoInst) chartBalançoInst.destroy();
+
+            chartBalançoInst = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Recursos', 'Gastos Totais', 'Sobra Líquida'],
+                    datasets: [{
+                        data: [recursosTotal, gastosTotal, Math.max(0, sobra)],
+                        backgroundColor: ['#10b981', '#f43f5e', '#3b82f6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('chartGastos').getContext('2d');
+            if (chartGastosInst) chartGastosInst.destroy();
+
+            const labelsGastos = ['Entrada', ...gastos.map(g => g.nome)];
+            const dataGastos = [valorEntrada, ...gastos.map(g => g.valor)];
+
+            chartGastosInst = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: labelsGastos,
+                    datasets: [{
+                        data: dataGastos,
+                        backgroundColor: ['#f43f5e', '#fb923c', '#a855f7', '#06b6d4', '#eab308', '#64748b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function exportarDados() {
+            const dados = localStorage.getItem('dados_imovel_app');
+            prompt("Copie os dados abaixo para partilhar com outra pessoa ou guardar:", dados);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            const salvo = localStorage.getItem('dados_imovel_app');
+            if (salvo) {
+                try {
+                    const parsed = JSON.parse(salvo);
+                    document.getElementById('valor_imovel').value = parsed.valorImovel || 480000;
+                    document.getElementById('pct_entrada').value = parsed.pctEntrada || 20;
+                    if (parsed.recursos) recursos = parsed.recursos;
+                    if (parsed.gastos) gastos = parsed.gastos;
+                } catch(e) {}
+            }
+            renderizarListas();
+            calcular();
+        });
+    </script>
+</body>
+</html>
